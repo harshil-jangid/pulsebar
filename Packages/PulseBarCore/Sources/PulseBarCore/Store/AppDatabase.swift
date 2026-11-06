@@ -140,6 +140,16 @@ public struct AppDatabase: Sendable {
                 t.column("start_snapshot_json", .text)
             }
         }
+
+        migrator.registerMigration("v5_checkins") { db in
+            try db.create(table: "checkins") { t in
+                t.column("night_of", .text).notNull()         // YYYY-MM-DD
+                t.column("tag", .text).notNull()
+                t.column("value", .text).notNull()
+                t.column("created_at", .datetime).notNull()
+                t.primaryKey(["night_of", "tag"])
+            }
+        }
         return migrator
     }
 }

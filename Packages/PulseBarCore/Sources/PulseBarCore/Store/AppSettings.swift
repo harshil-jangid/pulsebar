@@ -60,6 +60,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var checkinReminderEnabled = true
     public var checkinReminderMinute = 21 * 60
 
+    // Check-in custom tags (F6.2)
+    public var customTags: [CustomTag] = []
+
     // Google (F3.1) — client ID is not secret; the secret and tokens live in the Keychain.
     public var googleClientID: String?
 
@@ -104,6 +107,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         morningReadinessMinute = v(.morningReadinessMinute, d.morningReadinessMinute)
         checkinReminderEnabled = v(.checkinReminderEnabled, d.checkinReminderEnabled)
         checkinReminderMinute = v(.checkinReminderMinute, d.checkinReminderMinute)
+        customTags = v(.customTags, d.customTags)
         googleClientID = try? c.decodeIfPresent(String.self, forKey: .googleClientID)
         updateCheckEnabled = v(.updateCheckEnabled, d.updateCheckEnabled)
         lastUpdateCheck = try? c.decodeIfPresent(Date.self, forKey: .lastUpdateCheck)

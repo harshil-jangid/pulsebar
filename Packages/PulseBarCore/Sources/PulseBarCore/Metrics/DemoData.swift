@@ -30,6 +30,16 @@ public enum DemoData {
                     """, arguments: [r.date, r.restingHR, r.hrvMs, r.sleepMinutes, r.steps])
             }
         }
+        // Demo check-ins for the last 30 nights so insights have something to show.
+        for i in 1...30 {
+            guard let night = LocalDay.adding(-i - 1, to: today) else { continue }
+            var c = Checkin(nightOf: night)
+            c.alcohol = i % 4 == 0 ? .some : .none
+            c.lateScreens = i % 3 == 0
+            c.workout = i % 2 == 0 ? .moderate : .none
+            c.stress = 1 + i % 5
+            try? db.saveCheckin(c)
+        }
         let goalDay = LocalDay.adding(100, to: today) ?? today
         try? db.saveGoal(Goal(label: "Wedding", goalDate: goalDay))
     }

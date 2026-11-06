@@ -2,7 +2,7 @@ import PulseBarCore
 import SwiftUI
 
 enum PopoverTab: String, CaseIterable, Identifiable {
-    case now = "Now", today = "Today", progress = "Progress"
+    case now = "Now", today = "Today", progress = "Progress", checkin = "Check-in"
     var id: String { rawValue }
 }
 
@@ -38,6 +38,7 @@ struct PopoverView: View {
             case .now: NowView(env: env)
             case .today: TodayView(env: env)
             case .progress: GoalProgressView(env: env)
+            case .checkin: CheckinView(env: env)
             }
 
             Divider()
@@ -51,7 +52,7 @@ struct PopoverView: View {
             }
         }
         .padding()
-        .frame(width: 360)
+        .frame(width: 380)
         .onAppear { env.refreshMetrics() }   // pick up a new day when the popover opens
     }
 

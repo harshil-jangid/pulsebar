@@ -23,6 +23,7 @@ final class AppEnvironment {
     private(set) var readiness: Readiness?
     private(set) var goal: Goal?
     private(set) var restingBaseline: Baseline?
+    private(set) var insights: [HabitInsight] = []
 
     @ObservationIgnored private var nudge: NudgeEngine
     @ObservationIgnored private let log = Logger(subsystem: "io.github.pulsebar", category: "App")
@@ -61,6 +62,7 @@ final class AppEnvironment {
         if settings.value.onboardingCompleted { Task { await prepareNotifications() } }
         scheduleSync()
         scheduleMorningCheck()
+        if settings.value.onboardingCompleted && !isDemo { scheduleCheckinReminder() }
     }
 
     func syncInBackground() {
@@ -78,7 +80,33 @@ final class AppEnvironment {
         readiness = Readiness.compute(date: today, rows: dailyRows)
         restingBaseline = Baseline.compute(.restingHR, before: today, in: dailyRows)
         goal = try? db.ensureStartSnapshot()
+        let checkins = (try? db.checkins(from: "0000-01-01", to: "9999-12-31")) ?? []
+        let conditions = HabitCondition.builtIn(customTags: settings.value.customTags)
+        insights = HabitInsights.compute(metric: .hrv, checkins: checkins, rows: dailyRows, conditions: conditions)
+            + HabitInsights.compute(metric: .restingHR, checkins: checkins, rows: dailyRows, conditions: conditions)
         sendMorningCardIfDue(now: now)
+    }
+
+    func saveCheckin(_ c: Checkin) {
+        try? db.saveCheckin(c)
+        refreshMetrics()
+    }
+
+    /// Daily check-in reminder (F6.1) as a repeating local notification.
+    /// Skipped when the chosen time falls in quiet hours.
+    func scheduleCheckinReminder() {
+        let s = settings.value
+        let at = Calendar.current.date(bySettingHour: s.checkinReminderMinute / 60,
+                                       minute: s.checkinReminderMinute % 60, second: 0, of: Date())!
+        guard s.checkinReminderEnabled, !s.quietHours.contains(at) else {
+            notifier.cancel(id: "checkin-reminder")
+            return
+        }
+        Task {
+            await notifier.scheduleDaily(id: "checkin-reminder", minute: s.checkinReminderMinute,
+                                         title: "Evening check-in",
+                                         body: "Ten seconds: how was today? It helps PulseBar spot what moves your recovery.")
+        }
     }
 
     func saveGoal(_ goal: Goal) {
