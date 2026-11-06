@@ -104,6 +104,10 @@ struct ClaudeSettings: View {
             try? input.fileHandleForWriting.close()
             let data = output.fileHandleForReading.readDataToEndOfFile()
             p.waitUntilExit()
+            if p.terminationReason == .uncaughtSignal {
+                // Gatekeeper kills helpers inside a still-quarantined download (see README → Install).
+                return "macOS blocked the connector. See README → “If the Claude connector is blocked”."
+            }
             guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tools = (obj["result"] as? [String: Any])?["tools"] as? [Any] else {
                 return "The connector didn't answer as expected."

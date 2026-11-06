@@ -13,8 +13,10 @@ struct SettingsView: View {
             Tab("Check-in", systemImage: "checklist") { CheckinSettings(env: env) }
             Tab("Google", systemImage: "heart.text.square") { GoogleSettings(env: env) }
             Tab("Claude", systemImage: "bubble.left.and.text.bubble.right") { ClaudeSettings(env: env) }
+            Tab("Data", systemImage: "externaldrive") { DataSettings(env: env) }
+            Tab("About", systemImage: "info.circle") { AboutSettings(env: env) }
         }
-        .frame(width: 600, height: 560)
+        .frame(width: 640, height: 580)
     }
 }
 
@@ -45,6 +47,9 @@ struct GeneralSettings: View {
 
     var body: some View {
         Form {
+            Section("Startup") {
+                LaunchAtLoginToggle()
+            }
             Section("Heart-rate zones") {
                 Stepper(value: Binding(get: { settings.value.age ?? 0 },
                                        set: { v in settings.update { $0.age = v == 0 ? nil : v } }),

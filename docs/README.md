@@ -1,3 +1,6 @@
 # Docs
 
-Planned: google-setup.md (M3), claude-connector.md (M6), privacy.md, architecture.md.
+- [Google Health setup](google-setup.md)
+- [Claude connector](claude-connector.md)
+- [Privacy](privacy.md)
+- [Architecture](architecture.md)

@@ -140,6 +140,12 @@ public final class SettingsStore: DeviceMemory {
         value = json.flatMap { try? JSONDecoder().decode(AppSettings.self, from: Data($0.utf8)) } ?? AppSettings()
     }
 
+    /// Re-reads from the database (after "Delete all data").
+    public func reload() {
+        let json = (try? db.setting(AppSettings.storageKey)) ?? nil
+        value = json.flatMap { try? JSONDecoder().decode(AppSettings.self, from: Data($0.utf8)) } ?? AppSettings()
+    }
+
     public func update(_ change: (inout AppSettings) -> Void) {
         var copy = value
         change(&copy)

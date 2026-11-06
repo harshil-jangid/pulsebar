@@ -103,6 +103,11 @@ struct TrendChart: View {
             .chartYScale(domain: .automatic(includesZero: metric == .steps))
             .frame(height: 160)
             .accessibilityLabel("\(metric.title) trend, \(period.rawValue)ly")
+            .accessibilityValue({
+                let last = points.last.map { "latest \(Int(($0.rolling7 ?? $0.value).rounded())) \(metric.unit)" } ?? ""
+                let start = startValue.map { ", starting baseline \(Int($0.rounded())) \(metric.unit)" } ?? ""
+                return last + start
+            }())
         }
     }
 }

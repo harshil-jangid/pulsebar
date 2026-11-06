@@ -173,6 +173,8 @@ struct HeartRateChart: View {
         .chartXAxis(.hidden)
         .frame(height: 90)
         .accessibilityLabel("Heart rate, last 10 minutes")
+        .accessibilityValue(samples.isEmpty ? "No data" :
+            "Latest \(samples.last!.bpm) bpm, range \(samples.map(\.bpm).min()!) to \(samples.map(\.bpm).max()!)")
     }
 }
 

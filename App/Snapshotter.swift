@@ -23,6 +23,8 @@ enum Snapshotter {
             render(NudgeSettings(env: env).frame(width: 600, height: 560), to: dir.appending(path: "settings-nudges.png"))
             render(GoalSettings(env: env).frame(width: 600, height: 560), to: dir.appending(path: "settings-goal.png"))
             render(GoogleSettings(env: env).frame(width: 600, height: 900), to: dir.appending(path: "settings-google.png"))
+            render(ClaudeSettings(env: env).frame(width: 600, height: 760), to: dir.appending(path: "settings-claude.png"))
+            render(DataSettings(env: env).frame(width: 600, height: 520), to: dir.appending(path: "settings-data.png"))
             NSApp.terminate(nil)
         }
     }

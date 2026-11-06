@@ -24,6 +24,8 @@ final class AppEnvironment {
     private(set) var goal: Goal?
     private(set) var restingBaseline: Baseline?
     private(set) var insights: [HabitInsight] = []
+    /// Newer version on GitHub Releases, if any (F10.1).
+    private(set) var availableUpdate: UpdateCheck.Release?
 
     @ObservationIgnored private var nudge: NudgeEngine
     @ObservationIgnored private let log = Logger(subsystem: "io.github.pulsebar", category: "App")
@@ -56,13 +58,34 @@ final class AppEnvironment {
     }
 
     func start() {
-        if isDemo { DemoData.seed(db) }
+        if isDemo { DemoData.seed(db) } else { _ = try? db.pruneLiveSamples() } // F9.3 retention
         live.start()
         refreshMetrics()
         if settings.value.onboardingCompleted { Task { await prepareNotifications() } }
         scheduleSync()
         scheduleMorningCheck()
         if settings.value.onboardingCompleted && !isDemo { scheduleCheckinReminder() }
+        checkForUpdates()
+    }
+
+    /// At most daily, only if enabled; never downloads anything.
+    func checkForUpdates(force: Bool = false) {
+        guard !isDemo, settings.value.updateCheckEnabled,
+              force || UpdateCheck.isDue(lastCheck: settings.value.lastUpdateCheck) else { return }
+        settings.update { $0.lastUpdateCheck = Date() }
+        Task { availableUpdate = try? await UpdateCheck.newer(than: PulseBarCore.version, transport: URLSessionTransport()) }
+    }
+
+    /// Settings → Data → Delete all data (F9.2): revokes Google, wipes the
+    /// database and Keychain items, then shows onboarding again.
+    func deleteAllData() async {
+        recorder.endSession(at: Date())
+        await google.disconnect()
+        try? KeychainStore().set(SecretKey.clientSecret, nil)
+        try? db.deleteAllData()
+        settings.reload()
+        live.forgetDevice()
+        refreshMetrics()
     }
 
     func syncInBackground() {

@@ -21,6 +21,12 @@ struct PopoverView: View {
                 Label("Demo mode: simulated data, nothing is saved.", systemImage: "theatermasks")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            if let update = env.availableUpdate {
+                Link(destination: update.url) {
+                    Label("PulseBar \(update.version) is available", systemImage: "arrow.down.circle")
+                }
+                .font(.callout)
+            }
             if env.google.status == .reauthRequired {
                 HStack {
                     Label("Google sign-in expired.", systemImage: "exclamationmark.arrow.circlepath").font(.callout)
