@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds PulseBar.app (Release, universal), ad-hoc signs it (no paid Apple
 # account), zips it with ditto (preserves the signature) and writes a SHA-256.
-# Output: build/release/PulseBar-<version>.zip and .zip.sha256
+# Output: build/release/PulseBar-<version>.dmg and .zip, each with a .sha256
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -21,6 +21,17 @@ codesign --verify --deep --strict --verbose=1 "$APP"
 
 ZIP="PulseBar-$VERSION.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/$ZIP"
-(cd "$OUT" && shasum -a 256 "$ZIP" > "$ZIP.sha256")
-echo "Built $OUT/$ZIP"
-cat "$OUT/$ZIP.sha256"
+
+# Disk image: PulseBar.app next to an Applications shortcut, for drag-to-install.
+DMG="PulseBar-$VERSION.dmg"
+STAGE="$OUT/dmg"
+mkdir -p "$STAGE"
+ditto "$APP" "$STAGE/PulseBar.app"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "PulseBar $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$OUT/$DMG" -quiet
+codesign --force --sign - --timestamp=none "$OUT/$DMG"
+rm -rf "$STAGE"
+
+(cd "$OUT" && shasum -a 256 "$ZIP" > "$ZIP.sha256" && shasum -a 256 "$DMG" > "$DMG.sha256")
+echo "Built $OUT/$DMG and $OUT/$ZIP"
+cat "$OUT"/*.sha256

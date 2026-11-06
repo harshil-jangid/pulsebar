@@ -33,12 +33,12 @@ Requires **macOS 26 or later**.
 
 ## Install
 
-1. Download `PulseBar-x.y.z.zip` from the [latest release](https://github.com/harshil-jangid/pulsebar/releases/latest).
-   Optionally compare its SHA-256 with the `.sha256` file:
+1. Download **`PulseBar-x.y.z.dmg`** from the [latest release](https://github.com/harshil-jangid/pulsebar/releases/latest)
+   (a `.zip` of the same app is there too). Optionally compare its SHA-256 with the matching `.sha256` file:
    ```bash
-   shasum -a 256 ~/Downloads/PulseBar-*.zip
+   shasum -a 256 ~/Downloads/PulseBar-*.dmg
    ```
-2. Double-click the zip and drag **PulseBar.app** into **Applications**.
+2. Open the DMG and drag **PulseBar** onto the **Applications** shortcut, then eject the disk image.
 3. Open PulseBar. Because it's free and not notarized by Apple (that needs a paid developer account),
    macOS blocks it the first time. Then:
    - open **System Settings → Privacy & Security**, scroll to **Security**,

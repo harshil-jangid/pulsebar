@@ -10,5 +10,5 @@ First release.
 - Read-only Claude connector (MCP)
 - Export / delete everything; no accounts, servers or analytics
 
-**Install:** unzip, move to Applications, open, then System Settings → Privacy & Security → **Open Anyway** (see README).
+**Install:** open the `.dmg`, drag PulseBar to Applications, open it, then System Settings → Privacy & Security → **Open Anyway** (see README).
 Requires macOS 26+. Not medical advice.

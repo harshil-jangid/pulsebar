@@ -1,6 +1,6 @@
 name: Release
 
-# Tag push (v1.2.3) → test, build, ad-hoc sign, zip, publish a GitHub Release.
+# Tag push (v1.2.3) → test, build, ad-hoc sign, DMG + zip, publish a GitHub Release.
 # Manual run (workflow_dispatch) → same build, uploaded as a workflow artifact only.
 on:
   push:
@@ -43,6 +43,7 @@ jobs:
         with:
           name: PulseBar
           path: |
+            build/release/*.dmg
             build/release/*.zip
             build/release/*.sha256
 
@@ -51,6 +52,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" build/release/*.zip build/release/*.sha256 \
+          gh release create "$GITHUB_REF_NAME" build/release/*.dmg build/release/*.zip build/release/*.sha256 \
             --title "PulseBar $GITHUB_REF_NAME" \
             --notes-file docs/release-notes.md
