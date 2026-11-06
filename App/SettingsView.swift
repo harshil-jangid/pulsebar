@@ -12,6 +12,7 @@ struct SettingsView: View {
             Tab("Goal", systemImage: "flag.checkered") { GoalSettings(env: env) }
             Tab("Check-in", systemImage: "checklist") { CheckinSettings(env: env) }
             Tab("Google", systemImage: "heart.text.square") { GoogleSettings(env: env) }
+            Tab("Claude", systemImage: "bubble.left.and.text.bubble.right") { ClaudeSettings(env: env) }
         }
         .frame(width: 600, height: 560)
     }

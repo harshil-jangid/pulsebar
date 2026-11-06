@@ -40,14 +40,20 @@ public struct StartSnapshot: Codable, Sendable, Equatable {
     }
 }
 
-extension AppDatabase {
-    public func goal() throws -> Goal? {
-        try writer.read { db in
+extension Goal {
+    static func fetch(_ db: Database) throws -> Goal? {
+        do {
             guard let row = try Row.fetchOne(db, sql: "SELECT label, goal_date, intentions, start_snapshot_json FROM goal WHERE id = 1") else { return nil }
             let snapshot: StartSnapshot? = (row["start_snapshot_json"] as String?)
                 .flatMap { try? JSONDecoder().decode(StartSnapshot.self, from: Data($0.utf8)) }
             return Goal(label: row["label"], goalDate: row["goal_date"], intentions: row["intentions"], startSnapshot: snapshot)
         }
+    }
+}
+
+extension AppDatabase {
+    public func goal() throws -> Goal? {
+        try writer.read { try Goal.fetch($0) }
     }
 
     public func saveGoal(_ goal: Goal) throws {

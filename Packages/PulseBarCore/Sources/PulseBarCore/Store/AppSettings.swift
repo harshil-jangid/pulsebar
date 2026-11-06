@@ -66,6 +66,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     // Google (F3.1) — client ID is not secret; the secret and tokens live in the Keychain.
     public var googleClientID: String?
 
+    // Claude connector (F8): Claude may read data only after the user opts in
+    // (Google Health data policy: transfers only for a visible feature, with consent).
+    public var claudeAccessEnabled = false
+
     // Updates (F10.1)
     public var updateCheckEnabled = true
     public var lastUpdateCheck: Date?
@@ -109,6 +113,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         checkinReminderMinute = v(.checkinReminderMinute, d.checkinReminderMinute)
         customTags = v(.customTags, d.customTags)
         googleClientID = try? c.decodeIfPresent(String.self, forKey: .googleClientID)
+        claudeAccessEnabled = v(.claudeAccessEnabled, d.claudeAccessEnabled)
         updateCheckEnabled = v(.updateCheckEnabled, d.updateCheckEnabled)
         lastUpdateCheck = try? c.decodeIfPresent(Date.self, forKey: .lastUpdateCheck)
         lastNudgeAt = try? c.decodeIfPresent(Date.self, forKey: .lastNudgeAt)

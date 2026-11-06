@@ -81,6 +81,19 @@ public struct CustomTag: Codable, Sendable, Equatable, Identifiable, Hashable {
     }
 }
 
+extension Checkin {
+    /// Usable from any database connection, including the MCP server's read-only one.
+    static func fetch(_ db: Database, from: String, to: String) throws -> [Checkin] {
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT night_of, tag, value FROM checkins WHERE night_of >= ? AND night_of < ? ORDER BY night_of
+            """, arguments: [from, to])
+        let grouped = Dictionary(grouping: rows) { $0["night_of"] as String }
+        return grouped.keys.sorted().map { night in
+            Checkin(nightOf: night, rows: grouped[night]!.map { ($0["tag"], $0["value"]) })
+        }
+    }
+}
+
 extension AppDatabase {
     /// Replaces the check-in for that night (saving twice doesn't duplicate).
     public func saveCheckin(_ c: Checkin, now: Date = Date()) throws {
@@ -92,15 +105,7 @@ extension AppDatabase {
     }
 
     public func checkins(from: String, to: String) throws -> [Checkin] {
-        try writer.read { db in
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT night_of, tag, value FROM checkins WHERE night_of >= ? AND night_of < ? ORDER BY night_of
-                """, arguments: [from, to])
-            let grouped = Dictionary(grouping: rows) { $0["night_of"] as String }
-            return grouped.keys.sorted().map { night in
-                Checkin(nightOf: night, rows: grouped[night]!.map { ($0["tag"], $0["value"]) })
-            }
-        }
+        try writer.read { try Checkin.fetch($0, from: from, to: to) }
     }
 
     public func checkin(nightOf: String) throws -> Checkin? {

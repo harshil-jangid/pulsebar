@@ -29,7 +29,10 @@ targets:
     dependencies:
       - package: PulseBarCore
       - target: pulsebar-mcp
-        embed: false   # copied into the bundle in M6
+        embed: true    # → PulseBar.app/Contents/MacOS/pulsebar-mcp
+        link: false
+        copy:
+          destination: executables
     info:
       path: App/Info.plist
       properties:
