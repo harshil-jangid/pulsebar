@@ -1,0 +1,65 @@
+# XcodeGen spec: the single source of truth for PulseBar.xcodeproj.
+# Regenerate with `xcodegen generate` (the .xcodeproj is git-ignored).
+name: PulseBar
+options:
+  bundleIdPrefix: io.github.pulsebar
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    # Free distribution: ad-hoc signing ("Sign to Run Locally"), no Apple team.
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  PulseBarCore:
+    path: Packages/PulseBarCore
+
+targets:
+  PulseBar:
+    type: application
+    platform: macOS
+    sources: [App]
+    dependencies:
+      - package: PulseBarCore
+      - target: pulsebar-mcp
+        embed: false   # copied into the bundle in M6
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: PulseBar
+        LSUIElement: true            # menu-bar only, no Dock icon
+        LSApplicationCategoryType: public.app-category.healthcare-fitness
+        NSHumanReadableCopyright: "MIT License"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.pulsebar.PulseBar
+        ENABLE_HARDENED_RUNTIME: NO
+        GENERATE_INFOPLIST_FILE: NO
+
+  pulsebar-mcp:
+    type: tool
+    platform: macOS
+    sources: [MCP]
+    dependencies:
+      - package: PulseBarCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.pulsebar.mcp
+
+schemes:
+  PulseBar:
+    build:
+      targets:
+        PulseBar: all
+        pulsebar-mcp: all
+    test:
+      gatherCoverageData: true
+      targets:
+        - package: PulseBarCore/PulseBarCoreTests
