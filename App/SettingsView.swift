@@ -9,6 +9,7 @@ struct SettingsView: View {
         TabView {
             Tab("General", systemImage: "gearshape") { GeneralSettings(settings: env.settings) }
             Tab("Nudges", systemImage: "figure.walk") { NudgeSettings(env: env) }
+            Tab("Goal", systemImage: "flag.checkered") { GoalSettings(env: env) }
             Tab("Google", systemImage: "heart.text.square") { GoogleSettings(env: env) }
         }
         .frame(width: 600, height: 560)

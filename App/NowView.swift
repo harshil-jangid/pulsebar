@@ -151,7 +151,9 @@ struct HeartRateChart: View {
 
     var body: some View {
         let end = samples.last?.date ?? .now
-        let start = end.addingTimeInterval(-window)
+        // Fill the width while there's less than `window` of data, instead of a sliver at the edge.
+        let first = samples.first?.date ?? end
+        let start = max(end.addingTimeInterval(-window), min(first, end.addingTimeInterval(-60)))
         Chart {
             if let zone2 {
                 RectangleMark(xStart: .value("Start", start), xEnd: .value("End", end),

@@ -18,6 +18,12 @@ final class AppEnvironment {
     /// Shown in the popover if the database couldn't be opened (data then isn't saved).
     private(set) var storageError: String?
 
+    // Derived daily data (M4), refreshed after each sync and at day change.
+    private(set) var dailyRows: [DailyMetric] = []
+    private(set) var readiness: Readiness?
+    private(set) var goal: Goal?
+    private(set) var restingBaseline: Baseline?
+
     @ObservationIgnored private var nudge: NudgeEngine
     @ObservationIgnored private let log = Logger(subsystem: "io.github.pulsebar", category: "App")
 
@@ -49,13 +55,59 @@ final class AppEnvironment {
     }
 
     func start() {
+        if isDemo { DemoData.seed(db) }
         live.start()
-        Task { await prepareNotifications() }
+        refreshMetrics()
+        if settings.value.onboardingCompleted { Task { await prepareNotifications() } }
         scheduleSync()
+        scheduleMorningCheck()
     }
 
     func syncInBackground() {
-        Task { await google.sync() }
+        Task {
+            await google.sync()
+            refreshMetrics()
+        }
+    }
+
+    /// Recomputes readiness, baselines and goal from the database, then sends
+    /// the morning card if it's due.
+    func refreshMetrics(now: Date = Date()) {
+        let today = LocalDay.string(now)
+        dailyRows = (try? db.allDailyMetrics()) ?? []
+        readiness = Readiness.compute(date: today, rows: dailyRows)
+        restingBaseline = Baseline.compute(.restingHR, before: today, in: dailyRows)
+        goal = try? db.ensureStartSnapshot()
+        sendMorningCardIfDue(now: now)
+    }
+
+    func saveGoal(_ goal: Goal) {
+        try? db.saveGoal(goal)
+        refreshMetrics()
+    }
+
+    private func sendMorningCardIfDue(now: Date) {
+        guard let readiness, let card = MorningCard.message(now: now, settings: settings.value, readiness: readiness) else { return }
+        settings.update { $0.lastMorningNotificationDay = LocalDay.string(now) }
+        Task { await notifier.post(id: "morning-\(readiness.date)", title: card.title, body: card.body) }
+    }
+
+    /// One timer per day at the chosen morning time (no polling).
+    @ObservationIgnored private var morningTimer: Timer?
+    func scheduleMorningCheck(now: Date = Date()) {
+        morningTimer?.invalidate()
+        let minute = settings.value.morningReadinessMinute
+        var next = Calendar.current.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: now)!
+        if next <= now { next = Calendar.current.date(byAdding: .day, value: 1, to: next)! }
+        let timer = Timer(fire: next, interval: 0, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.syncInBackground()     // refreshMetrics → morning card once data is in
+                self?.scheduleMorningCheck()
+            }
+        }
+        timer.tolerance = 120
+        RunLoop.main.add(timer, forMode: .common)
+        morningTimer = timer
     }
 
     /// Sync on launch, on wake, and every 3 hours (F3.5). The timer has a large
@@ -63,7 +115,7 @@ final class AppEnvironment {
     @ObservationIgnored private var syncTimer: Timer?
     private func scheduleSync() {
         guard !isDemo else { return }
-        Task { await google.sync() }
+        syncInBackground()
         let timer = Timer(timeInterval: 3 * 3600, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.syncInBackground() }
         }
@@ -77,9 +129,12 @@ final class AppEnvironment {
         }
     }
 
-    /// Resting HR used for the nudge threshold: personal baseline once available
-    /// (M4), otherwise the user's fallback setting.
-    var restingHRForNudge: Int { settings.value.fallbackRestingHR }
+    /// Resting HR used for the nudge threshold: personal 30-day baseline once
+    /// calibrated, otherwise the user's fallback setting (F2.6).
+    var restingHRForNudge: Int {
+        if let b = restingBaseline, b.isCalibrated { return Int(b.median.rounded()) }
+        return settings.value.fallbackRestingHR
+    }
 
     private func handle(_ event: HeartRateSourceEvent) {
         recorder.handle(event)
@@ -94,7 +149,7 @@ final class AppEnvironment {
         }
     }
 
-    private func prepareNotifications() async {
+    func prepareNotifications() async {
         if settings.value.nudgeEnabled || settings.value.checkinReminderEnabled {
             _ = await notifier.requestAuthorization()
         }

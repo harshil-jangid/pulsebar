@@ -130,6 +130,16 @@ public struct AppDatabase: Sendable {
                 t.column("last_error", .text)
             }
         }
+
+        migrator.registerMigration("v4_goal") { db in
+            try db.create(table: "goal") { t in
+                t.primaryKey("id", .integer).check { $0 == 1 }   // single row
+                t.column("label", .text).notNull()
+                t.column("goal_date", .text).notNull()
+                t.column("intentions", .text)
+                t.column("start_snapshot_json", .text)
+            }
+        }
         return migrator
     }
 }

@@ -16,6 +16,9 @@ struct PulseBarApp: App {
         let env = AppEnvironment(demo: CommandLine.arguments.contains("-demo"))
         env.start()
         _env = State(initialValue: env)
+        #if DEBUG
+        Snapshotter.runIfRequested(env: env)
+        #endif
         // A fresh launch always means "I want to see PulseBar".
         UserDefaults.standard.set(true, forKey: AppDelegate.showIconKey)
     }
@@ -31,6 +34,13 @@ struct PulseBarApp: App {
         Settings {
             SettingsView(env: env)
         }
+
+        // First-run onboarding: presented at launch only until completed.
+        Window("Welcome to PulseBar", id: OnboardingView.windowID) {
+            OnboardingView(env: env)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(env.settings.value.onboardingCompleted ? .suppressed : .presented)
     }
 }
 

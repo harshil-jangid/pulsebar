@@ -272,14 +272,11 @@ public final class GoogleSync {
         }
     }
 
-    public static func dayString(_ date: Date, _ calendar: Calendar = .current) -> String {
-        let c = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+    nonisolated public static func dayString(_ date: Date, _ calendar: Calendar = .current) -> String {
+        LocalDay.string(date, calendar)
     }
 
-    public static func parseDay(_ s: String, _ calendar: Calendar = .current) -> Date? {
-        let p = s.split(separator: "-").compactMap { Int($0) }
-        guard p.count == 3 else { return nil }
-        return calendar.date(from: DateComponents(year: p[0], month: p[1], day: p[2]))
+    nonisolated public static func parseDay(_ s: String, _ calendar: Calendar = .current) -> Date? {
+        LocalDay.parse(s, calendar)
     }
 }
