@@ -26,7 +26,7 @@ ad-hoc-signed app on current macOS._
 
 ## Build from source
 
-Requirements: macOS 14+, Xcode 16.3+ (free from the Mac App Store), Homebrew.
+Requirements: macOS 26+, Xcode 26+ (free from the Mac App Store), Homebrew.
 
 ```bash
 brew install xcodegen

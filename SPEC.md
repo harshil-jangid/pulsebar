@@ -160,7 +160,7 @@ Priority: **P0** = v1 must-have, **P1** = v1 should-have, **P2** = later.
                                                          Claude desktop app
 ```
 
-- **Language/stack:** Swift 6, SwiftUI, Swift Charts, CoreBluetooth, AuthenticationServices/URLSession, macOS **14+**.
+- **Language/stack:** Swift 6, SwiftUI, Swift Charts, CoreBluetooth, AuthenticationServices/URLSession, macOS **26+** (raised from 14+ on 2026-11-06: use current SwiftUI/Liquid Glass APIs directly, no availability shims).
 - **Packages:** one Swift package `PulseBarCore` (models, store, metrics, Google client, BLE parsing; no UI) used by both the app target and the `pulsebar-mcp` executable target.
 - **DB:** SQLite via **GRDB.swift** (MIT). Not SwiftData, because the MCP server needs a stable, documented schema.
 - **MCP:** the official MCP Swift SDK if it fits (verify, §11 Q5); otherwise a minimal, well-tested JSON-RPC-over-stdio implementation of the MCP tools subset.

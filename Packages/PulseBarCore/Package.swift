@@ -1,4 +1,4 @@
-// swift-tools-version:6.1
+// swift-tools-version:6.2
 // PulseBarCore: models, storage, metrics, Google client and BLE parsing.
 // No UI code lives here, so both the menu-bar app and the `pulsebar-mcp`
 // executable can share it, and it can be tested with plain `swift test`.
@@ -7,7 +7,7 @@ import PackageDescription
 
 let package = Package(
     name: "PulseBarCore",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v26)],
     products: [
         .library(name: "PulseBarCore", targets: ["PulseBarCore"]),
     ],
