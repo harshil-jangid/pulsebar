@@ -68,3 +68,13 @@ struct ReconnectBackoffTests {
         #expect(b.nextDelay(jitter: 1) == 60)
     }
 }
+
+@Suite("DemoHeartRateSource")
+struct DemoHeartRateSourceTests {
+    @Test("demo BPM stays in a realistic range")
+    func range() {
+        let values = (0..<1200).map(DemoHeartRateSource.bpm(at:))
+        #expect(values.min()! >= 60)
+        #expect(values.max()! <= 125)
+    }
+}

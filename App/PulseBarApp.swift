@@ -7,7 +7,13 @@ struct PulseBarApp: App {
     @State private var live: LiveHeartRateModel
 
     init() {
-        let model = LiveHeartRateModel(source: CoreBluetoothHeartRateSource())
+        let demo = CommandLine.arguments.contains("-demo")
+        let source: HeartRateSource = demo ? DemoHeartRateSource() : CoreBluetoothHeartRateSource()
+        let defaults = demo ? UserDefaults(suiteName: "PulseBarDemo")! : .standard
+        if demo {
+            defaults.set(DemoHeartRateSource.deviceID.uuidString, forKey: LiveHeartRateModel.rememberedDeviceKey)
+        }
+        let model = LiveHeartRateModel(source: source, defaults: defaults)
         model.start() // starts Bluetooth so a remembered device reconnects at launch
         _live = State(initialValue: model)
     }

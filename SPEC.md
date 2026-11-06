@@ -245,8 +245,11 @@ pulsebar/
 1. **Google Health API specifics:** exact base URL/version (v4 vs v4beta), data-type names, endpoints (`list`, `reconcile`, rollups), pagination, and the **minimal OAuth scopes** for the data in F3.6. Source: https://developers.google.com/health
 2. **OAuth token lifetime for unverified/testing-mode projects with Google Health's restricted scopes:** do refresh tokens expire after ~7 days? Can a personal BYO project be set to "In production" without verification? Design F3.4 for the worst case either way.
 3. **Does the Fitbit Air's heart-rate broadcast include RR intervals?** If not, hide live HRV (F2.5) for that device.
+   - *Status (2026-11-06):* the app now detects this per device and shows "Beat-to-beat (RR) data: yes / not sent" in the popover. Fitbit Air result: **pending owner's test**.
 4. **Can the Mac connect to the Air's HR broadcast while the phone's Google Health app is also connected?** Test real-world behavior; document it.
+   - *Status (2026-11-06):* Mac connected to the Air with "Share heart rate" on (Google Health → Connections → device → Share heart rate, per support.google.com/fitbit/answer/14236705, which lists the Air as compatible with the Bluetooth Heart Rate Profile). Whether the phone stayed connected at the same time: **pending owner's confirmation**.
 5. **MCP Swift SDK:** does the official SDK support stdio servers on macOS 14 with current MCP spec? Otherwise implement the minimal subset.
+   - *Checked 2026-11-06:* SDK 0.12.1 supports stdio servers (macOS 13+, Swift 6.1+, MCP spec 2025-11-25) but is pre-1.0 and pulls in swift-nio and a branch-pinned dependency. Decision deferred to M6.
 6. **Current macOS steps for opening an ad-hoc-signed app downloaded from GitHub** (wording and location of "Open Anyway").
 7. **Google API terms for open-source desktop apps:** confirm BYO-client is permitted and what the in-app disclosure must contain.
 
