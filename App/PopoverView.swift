@@ -15,6 +15,13 @@ struct PopoverView: View {
                 Label("Demo mode: simulated data, nothing is saved.", systemImage: "theatermasks")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            if env.google.status == .reauthRequired {
+                HStack {
+                    Label("Google sign-in expired.", systemImage: "exclamationmark.arrow.circlepath").font(.callout)
+                    Spacer()
+                    Button("Reconnect") { NSApp.activate(); openSettings() }
+                }
+            }
             NowView(env: env)
             Divider()
             HStack {

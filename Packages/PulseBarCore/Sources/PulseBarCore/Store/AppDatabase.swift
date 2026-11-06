@@ -94,6 +94,42 @@ public struct AppDatabase: Sendable {
             }
             try db.create(index: "live_rr_session", on: "live_rr", columns: ["session_id"])
         }
+
+        migrator.registerMigration("v3_google_health") { db in
+            try db.create(table: "daily_metrics") { t in
+                t.primaryKey("date", .text)                    // YYYY-MM-DD, user's local day
+                t.column("resting_hr", .double)
+                t.column("hrv_rmssd_ms", .double)              // sleep-based, from Google
+                t.column("sleep_minutes", .integer)
+                t.column("sleep_start", .datetime)
+                t.column("sleep_end", .datetime)
+                t.column("deep_min", .integer)
+                t.column("rem_min", .integer)
+                t.column("light_min", .integer)
+                t.column("awake_min", .integer)
+                t.column("steps", .integer)
+                t.column("spo2_avg", .double)
+                t.column("resp_rate", .double)
+                t.column("vo2max", .double)
+                t.column("source", .text)
+                t.column("updated_at", .datetime)
+            }
+            try db.create(table: "workouts") { t in
+                t.primaryKey("id", .text)
+                t.column("start", .datetime).notNull().indexed()
+                t.column("end", .datetime)
+                t.column("type", .text)
+                t.column("avg_hr", .double)
+                t.column("max_hr", .integer)
+                t.column("source", .text)
+            }
+            try db.create(table: "sync_state") { t in
+                t.primaryKey("data_type", .text)
+                t.column("last_success", .datetime)
+                t.column("cursor", .text)                      // last fully-synced local date
+                t.column("last_error", .text)
+            }
+        }
         return migrator
     }
 }

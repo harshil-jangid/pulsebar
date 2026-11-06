@@ -243,7 +243,9 @@ pulsebar/
 ## 11. Open questions: verify before building on them
 
 1. **Google Health API specifics:** exact base URL/version (v4 vs v4beta), data-type names, endpoints (`list`, `reconcile`, rollups), pagination, and the **minimal OAuth scopes** for the data in F3.6. Source: https://developers.google.com/health
+   - *Verified 2026-11-06 (discovery doc rev. 20261105, developers.google.com/health/data-types, /endpoints):* base `https://health.googleapis.com/v4` (v4beta mirrors it). Types: `daily-resting-heart-rate`, `daily-heart-rate-variability`, `sleep`, `steps`, `exercise`, `daily-oxygen-saturation`, `daily-respiratory-rate`, `daily-vo2-max`. `GET …/dataTypes/{type}/dataPoints:reconcile` with AIP-160 `filter` and `pageToken`/`nextPageToken`. Minimal scopes: `googlehealth.health_metrics_and_measurements.readonly`, `googlehealth.sleep.readonly`, `googlehealth.activity_and_fitness.readonly`. Docs don't promise `dailyRollUp` de-duplicates sources, so steps are summed client-side from `reconcile` (which explicitly de-duplicates).
 2. **OAuth token lifetime for unverified/testing-mode projects with Google Health's restricted scopes:** do refresh tokens expire after ~7 days? Can a personal BYO project be set to "In production" without verification? Design F3.4 for the worst case either way.
+   - *Verified 2026-11-06 (developers.google.com/health/setup):* in **Testing**, refresh tokens "expire after 7 days"; **In production** they generally don't expire (unless revoked or unused ~6 months). Unverified clients are capped at 100 users in testing and production. Whether a personal project can publish to production without verification is **not stated** → F3.4 handles the 7-day worst case (invalid_grant → "Reconnect Google", data kept). Note: Google's setup guide shows a *Web* client; PulseBar uses a *Desktop app* client with loopback + PKCE per the native-app OAuth guide. **Untested with a real account yet.**
 3. **Does the Fitbit Air's heart-rate broadcast include RR intervals?** If not, hide live HRV (F2.5) for that device.
    - *Status (2026-11-06):* the app now detects this per device and shows "Beat-to-beat (RR) data: yes / not sent" in the popover. Fitbit Air result: **pending owner's test**.
 4. **Can the Mac connect to the Air's HR broadcast while the phone's Google Health app is also connected?** Test real-world behavior; document it.
@@ -252,6 +254,7 @@ pulsebar/
    - *Checked 2026-11-06:* SDK 0.12.1 supports stdio servers (macOS 13+, Swift 6.1+, MCP spec 2025-11-25) but is pre-1.0 and pulls in swift-nio and a branch-pinned dependency. Decision deferred to M6.
 6. **Current macOS steps for opening an ad-hoc-signed app downloaded from GitHub** (wording and location of "Open Anyway").
 7. **Google API terms for open-source desktop apps:** confirm BYO-client is permitted and what the in-app disclosure must contain.
+   - *Checked 2026-11-06 (Health API Developer and User Data Policy):* disclosure must be in-app, immediately before consent, name the data types and uses, require an affirmative action, and state Limited Use compliance → implemented in Settings → Google. Tokens encrypted at rest (Keychain ✓). Data on portable devices must be encrypted: PulseBar relies on macOS FileVault + 0600 file permissions (**owner to confirm acceptable / document**). Transfers to third parties only for a user-visible feature with consent → the Claude connector (M6) needs explicit opt-in. The policy does **not** address bring-your-own clients explicitly.
 
 ---
 

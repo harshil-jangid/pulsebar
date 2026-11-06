@@ -14,6 +14,7 @@ final class AppEnvironment {
     let live: LiveHeartRateModel
     let recorder: SessionRecorder
     let notifier: Notifier
+    let google: GoogleSync
     /// Shown in the popover if the database couldn't be opened (data then isn't saved).
     private(set) var storageError: String?
 
@@ -35,6 +36,8 @@ final class AppEnvironment {
         live = LiveHeartRateModel(source: source, memory: settings)
         recorder = SessionRecorder(db: db)
         notifier = SystemNotifier()
+        google = GoogleSync(db: db, settings: settings,
+                            secrets: demo ? MemorySecretStore() : KeychainStore())
         nudge = NudgeEngine(lastNudgeAt: settings.value.lastNudgeAt)
 
         live.eventObserver = { [weak self] event in self?.handle(event) }
@@ -48,6 +51,30 @@ final class AppEnvironment {
     func start() {
         live.start()
         Task { await prepareNotifications() }
+        scheduleSync()
+    }
+
+    func syncInBackground() {
+        Task { await google.sync() }
+    }
+
+    /// Sync on launch, on wake, and every 3 hours (F3.5). The timer has a large
+    /// tolerance so macOS can coalesce it with other work (battery, spec §4).
+    @ObservationIgnored private var syncTimer: Timer?
+    private func scheduleSync() {
+        guard !isDemo else { return }
+        Task { await google.sync() }
+        let timer = Timer(timeInterval: 3 * 3600, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncInBackground() }
+        }
+        timer.tolerance = 15 * 60
+        RunLoop.main.add(timer, forMode: .common)
+        syncTimer = timer
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncInBackground() }
+        }
     }
 
     /// Resting HR used for the nudge threshold: personal baseline once available
