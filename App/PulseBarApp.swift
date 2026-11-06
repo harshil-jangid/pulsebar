@@ -1,7 +1,8 @@
 import PulseBarCore
 import SwiftUI
 
-/// Menu-bar-only app (no Dock icon: `LSUIElement` in project.yml).
+/// Menu-bar app (`LSUIElement`), plus a regular window whenever the user opens
+/// the app or the menu-bar icon is hidden (see `MainWindowController`).
 /// Launch with `-demo` for simulated heart rate and a throwaway in-memory database.
 @main
 struct PulseBarApp: App {
@@ -16,6 +17,7 @@ struct PulseBarApp: App {
         let env = AppEnvironment(demo: CommandLine.arguments.contains("-demo"))
         env.start()
         _env = State(initialValue: env)
+        AppDelegate.environment = env
         #if DEBUG
         Snapshotter.runIfRequested(env: env)
         #endif
@@ -46,11 +48,29 @@ struct PulseBarApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static let showIconKey = "showMenuBarIcon"
+    @MainActor static var environment: AppEnvironment?
 
-    /// Called when the user opens PulseBar while it's already running.
+    /// If macOS hid the menu-bar icon (SwiftUI flips `isInserted` to false),
+    /// open the window so PulseBar is never unreachable.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            MainActor.assumeIsolated {
+                guard !CommandLine.arguments.contains("-snapshot"),
+                      !UserDefaults.standard.bool(forKey: Self.showIconKey),
+                      let env = Self.environment else { return }
+                MainWindowController.shared.show(env: env)
+            }
+        }
+    }
+
+    /// Called when the user opens PulseBar while it's already running
+    /// (Spotlight, Finder, Dock): always show the window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         UserDefaults.standard.set(true, forKey: Self.showIconKey)
-        return true
+        MainActor.assumeIsolated {
+            if let env = Self.environment { MainWindowController.shared.show(env: env) }
+        }
+        return false
     }
 }
 

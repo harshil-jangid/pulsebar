@@ -6,9 +6,11 @@ enum PopoverTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-/// The window that drops down from the menu-bar icon.
+/// The window that drops down from the menu-bar icon (also hosted in `MainWindowController`).
 struct PopoverView: View {
     let env: AppEnvironment
+    /// True when shown in the regular app window instead of the menu-bar popover.
+    var inWindow = false
     @Environment(\.openSettings) private var openSettings
     @AppStorage("popover.tab") private var tab: PopoverTab = .now
 
@@ -65,6 +67,11 @@ struct PopoverView: View {
     private func showSettings() {
         // Menu-bar apps aren't frontmost; bring the Settings window forward.
         NSApp.activate()
-        openSettings()
+        if inWindow {
+            // Hosted outside a SwiftUI scene: ask the app's Settings scene directly.
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            openSettings()
+        }
     }
 }
