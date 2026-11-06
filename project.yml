@@ -37,6 +37,7 @@ targets:
         LSUIElement: true            # menu-bar only, no Dock icon
         LSApplicationCategoryType: public.app-category.healthcare-fitness
         NSHumanReadableCopyright: "MIT License"
+        NSBluetoothAlwaysUsageDescription: "PulseBar reads live heart rate from your wearable or chest strap using the standard Bluetooth Heart Rate Service. It never sends commands to your device."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.pulsebar.PulseBar
