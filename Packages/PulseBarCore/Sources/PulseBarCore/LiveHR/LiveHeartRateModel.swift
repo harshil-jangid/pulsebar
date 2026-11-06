@@ -24,6 +24,11 @@ public final class LiveHeartRateModel {
     public private(set) var isScanning = false
     public private(set) var latest: HeartRateMeasurement?
     public private(set) var isFresh = false
+    /// Whether the connected device has sent any RR intervals (needed for live
+    /// HRV, spec F2.5 / §11 Q3). Reset on each new connection.
+    public private(set) var deviceSendsRR = false
+    /// Number of readings this connection, so "no RR" is only claimed after enough data.
+    public private(set) var readingsThisConnection = 0
     /// Samples from the last `window` seconds, oldest first, for the sparkline.
     public private(set) var samples: [HeartRateSample] = []
     public let window: TimeInterval
@@ -95,10 +100,16 @@ public final class LiveHeartRateModel {
                 discovered.append(device)
             }
         case .connection(let state):
+            if case .connecting = state {
+                deviceSendsRR = false
+                readingsThisConnection = 0
+            }
             connection = state
             if case .connected = state {} else { clearLive() }
         case .measurement(let m, let date):
             latest = m
+            readingsThisConnection += 1
+            if !m.rrIntervalsMs.isEmpty { deviceSendsRR = true }
             if m.hasValidContact {
                 samples.append(HeartRateSample(date: date, bpm: m.bpm))
             }

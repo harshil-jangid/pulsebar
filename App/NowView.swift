@@ -188,6 +188,27 @@ struct ZoneSettings: View {
     }
 }
 
+/// Whether live HRV (spec F2.5) will be possible with this device.
+/// "Not sent" is only claimed after 10 readings, so one RR-less packet isn't misread.
+struct RRStatus: View {
+    let sendsRR: Bool
+    let readings: Int
+
+    var body: some View {
+        Group {
+            if sendsRR {
+                Label("Beat-to-beat (RR) data: yes", systemImage: "waveform.path.ecg")
+            } else if readings < 10 {
+                Label("Beat-to-beat (RR) data: checking…", systemImage: "waveform.path.ecg")
+            } else {
+                Label("Beat-to-beat (RR) data: not sent by this device", systemImage: "waveform.path.ecg")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+}
+
 struct DeviceSection: View {
     let live: LiveHeartRateModel
     @State private var showPicker = false
@@ -204,6 +225,9 @@ struct DeviceSection: View {
                     live.isScanning ? live.stopScan() : live.startScan()
                 }
                 .disabled(live.availability != .poweredOn)
+            }
+            if case .connected = live.connection {
+                RRStatus(sendsRR: live.deviceSendsRR, readings: live.readingsThisConnection)
             }
             if live.isScanning {
                 if live.discovered.isEmpty {

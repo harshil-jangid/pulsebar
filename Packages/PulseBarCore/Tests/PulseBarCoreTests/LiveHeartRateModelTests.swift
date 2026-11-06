@@ -102,6 +102,22 @@ struct LiveHeartRateModelTests {
         #expect(model.isScanning)
     }
 
+    @Test("detects whether the device sends RR intervals; resets on new connection")
+    func rrDetection() {
+        let model = makeModel()
+        source.send(.connection(.connecting(name: "x")))
+        source.send(.connection(.connected(name: "x")))
+        source.send(.measurement(HeartRateMeasurement(bpm: 70), at: t0))
+        #expect(!model.deviceSendsRR)
+        #expect(model.readingsThisConnection == 1)
+        source.send(.measurement(HeartRateMeasurement(bpm: 70, rrIntervalsMs: [850]), at: t0))
+        #expect(model.deviceSendsRR)
+
+        source.send(.connection(.connecting(name: "y")))
+        #expect(!model.deviceSendsRR)
+        #expect(model.readingsThisConnection == 0)
+    }
+
     @Test("Bluetooth turning off stops scanning and blanks BPM")
     func poweredOff() {
         let model = makeModel()
