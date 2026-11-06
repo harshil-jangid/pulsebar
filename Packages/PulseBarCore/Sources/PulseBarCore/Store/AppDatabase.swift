@@ -16,25 +16,48 @@ public struct AppDatabase: Sendable {
 
     /// In-memory database for tests and previews.
     public static func inMemory() throws -> AppDatabase {
-        try AppDatabase(DatabaseQueue())
+        try AppDatabase(DatabaseQueue(configuration: Self.configuration()))
+    }
+
+    /// `~/Library/Application Support/PulseBar/` (spec §4).
+    public static var defaultDirectory: URL {
+        URL.applicationSupportDirectory.appending(path: "PulseBar", directoryHint: .isDirectory)
+    }
+
+    public static var defaultURL: URL { defaultDirectory.appending(path: "pulsebar.sqlite") }
+
+    /// Opens (creating if needed) the database file. Directory 0700, file 0600,
+    /// so other users on the Mac can't read health data.
+    public static func openShared(at url: URL = defaultURL) throws -> AppDatabase {
+        let fm = FileManager.default
+        let dir = url.deletingLastPathComponent()
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true,
+                               attributes: [.posixPermissions: 0o700])
+        let db = try AppDatabase(DatabaseQueue(path: url.path, configuration: configuration()))
+        try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        return db
     }
 
     /// Read-only connection to an existing database file (used by the MCP server).
     /// Runs no migrations; it only reads what the app has written.
-    public static func openReadOnly(at url: URL) throws -> any DatabaseReader {
-        var config = Configuration()
+    public static func openReadOnly(at url: URL = defaultURL) throws -> any DatabaseReader {
+        var config = configuration()
         config.readonly = true
         return try DatabaseQueue(path: url.path, configuration: config)
+    }
+
+    static func configuration() -> Configuration {
+        var config = Configuration()
+        config.foreignKeysEnabled = true
+        // App and MCP server may touch the file at the same time; wait briefly instead of failing.
+        config.busyMode = .timeout(5)
+        return config
     }
 
     /// Ordered, append-only list of schema changes. Never edit a shipped
     /// migration; add a new one instead.
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
-        #if DEBUG
-        // Rebuild from scratch when a migration changes during development.
-        migrator.eraseDatabaseOnSchemaChange = true
-        #endif
 
         migrator.registerMigration("v1_settings") { db in
             try db.create(table: "settings") { t in
@@ -42,8 +65,35 @@ public struct AppDatabase: Sendable {
                 t.column("value", .text).notNull()
             }
         }
-        // Later milestones add: live_sessions, live_samples (M2),
-        // daily_metrics, workouts, sync_state (M3), goal (M4), checkins (M5).
+
+        migrator.registerMigration("v2_live_sessions") { db in
+            try db.create(table: "live_sessions") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("start", .datetime).notNull().indexed()
+                t.column("end", .datetime)
+                t.column("kind", .text).notNull()            // desk | workout
+                t.column("device_name", .text)
+                t.column("avg_hr", .double)
+                t.column("max_hr", .integer)
+                t.column("live_rmssd_ms", .double)
+            }
+            try db.create(table: "live_samples") { t in
+                t.column("session_id", .integer).notNull()
+                    .references("live_sessions", onDelete: .cascade)
+                t.column("ts", .datetime).notNull()
+                t.column("bpm", .integer).notNull()
+            }
+            try db.create(index: "live_samples_session_ts", on: "live_samples", columns: ["session_id", "ts"])
+            // One packet can carry several RR intervals, so they get their own
+            // rows instead of a single nullable column (deviation from SPEC §5.1).
+            try db.create(table: "live_rr") { t in
+                t.column("session_id", .integer).notNull()
+                    .references("live_sessions", onDelete: .cascade)
+                t.column("ts", .datetime).notNull()
+                t.column("rr_ms", .double).notNull()
+            }
+            try db.create(index: "live_rr_session", on: "live_rr", columns: ["session_id"])
+        }
         return migrator
     }
 }

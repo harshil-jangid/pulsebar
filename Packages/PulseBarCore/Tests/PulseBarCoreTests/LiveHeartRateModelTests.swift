@@ -15,21 +15,20 @@ final class MockHeartRateSource: HeartRateSource {
 }
 
 @MainActor
+final class MemoryStub: DeviceMemory {
+    var rememberedDeviceID: UUID?
+}
+
+@MainActor
 @Suite("LiveHeartRateModel")
 struct LiveHeartRateModelTests {
     let source = MockHeartRateSource()
-    let defaults: UserDefaults
+    let memory = MemoryStub()
     let device = DiscoveredDevice(id: UUID(), name: "Fitbit Air")
     let t0 = Date(timeIntervalSince1970: 1_000_000)
 
-    init() {
-        let suite = "test.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-    }
-
     func makeModel() -> LiveHeartRateModel {
-        LiveHeartRateModel(source: source, defaults: defaults)
+        LiveHeartRateModel(source: source, memory: memory)
     }
 
     @Test("shows BPM only while connected with a fresh, valid reading")
@@ -69,7 +68,7 @@ struct LiveHeartRateModelTests {
         #expect(source.calls.contains("connect \(device.id)"))
 
         let source2 = MockHeartRateSource()
-        let relaunched = LiveHeartRateModel(source: source2, defaults: defaults)
+        let relaunched = LiveHeartRateModel(source: source2, memory: memory)
         #expect(relaunched.rememberedDeviceID == device.id)
         source2.send(.availability(.poweredOn))
         #expect(source2.calls == ["connect \(device.id)"])
@@ -88,7 +87,7 @@ struct LiveHeartRateModelTests {
         model.connect(to: device)
         model.forgetDevice()
         #expect(model.rememberedDeviceID == nil)
-        #expect(defaults.string(forKey: LiveHeartRateModel.rememberedDeviceKey) == nil)
+        #expect(memory.rememberedDeviceID == nil)
         #expect(source.calls.last == "disconnect")
     }
 

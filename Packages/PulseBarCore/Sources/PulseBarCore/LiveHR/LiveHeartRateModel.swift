@@ -14,7 +14,6 @@ public struct HeartRateSample: Sendable, Equatable, Identifiable {
 @MainActor
 @Observable
 public final class LiveHeartRateModel {
-    public static let rememberedDeviceKey = "liveHR.rememberedDeviceID"
     /// How long a reading counts as "live" without a newer one.
     public static let staleAfter: Duration = .seconds(10)
 
@@ -33,18 +32,23 @@ public final class LiveHeartRateModel {
     public private(set) var samples: [HeartRateSample] = []
     public let window: TimeInterval
 
-    public private(set) var rememberedDeviceID: UUID?
+    public var rememberedDeviceID: UUID? { memory.rememberedDeviceID }
+
+    /// Called after the model handles each event (sessions, nudges listen here).
+    @ObservationIgnored public var eventObserver: ((HeartRateSourceEvent) -> Void)?
 
     private let source: HeartRateSource
-    private let defaults: UserDefaults
+    private let memory: DeviceMemory
     @ObservationIgnored private var staleTask: Task<Void, Never>?
 
-    public init(source: HeartRateSource, defaults: UserDefaults = .standard, window: TimeInterval = 600) {
+    public init(source: HeartRateSource, memory: DeviceMemory, window: TimeInterval = 600) {
         self.source = source
-        self.defaults = defaults
+        self.memory = memory
         self.window = window
-        rememberedDeviceID = defaults.string(forKey: Self.rememberedDeviceKey).flatMap(UUID.init)
-        source.onEvent = { [weak self] in self?.handle($0) }
+        source.onEvent = { [weak self] in
+            self?.handle($0)
+            self?.eventObserver?($0)
+        }
     }
 
     /// BPM to show, or nil ("—") when disconnected, stale, or no skin contact.
@@ -69,16 +73,14 @@ public final class LiveHeartRateModel {
     /// Connects and remembers the device for auto-reconnect on next launch.
     public func connect(to device: DiscoveredDevice) {
         stopScan()
-        rememberedDeviceID = device.id
-        defaults.set(device.id.uuidString, forKey: Self.rememberedDeviceKey)
+        memory.rememberedDeviceID = device.id
         source.connect(deviceID: device.id)
     }
 
     /// Disconnects and forgets the device.
     public func forgetDevice() {
         source.disconnect()
-        rememberedDeviceID = nil
-        defaults.removeObject(forKey: Self.rememberedDeviceKey)
+        memory.rememberedDeviceID = nil
         connection = .idle
         clearLive()
     }

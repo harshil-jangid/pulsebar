@@ -2,16 +2,11 @@ import Charts
 import PulseBarCore
 import SwiftUI
 
-/// The popover's "Now" view: live BPM, zone, 10-minute chart, device picker.
+/// The popover's "Now" view: live BPM, zone, session, 10-minute chart, device picker.
 struct NowView: View {
-    let live: LiveHeartRateModel
-
-    @AppStorage("zones.age") private var age = 0
-    @AppStorage("zones.maxHROverride") private var maxHROverride = 0
-
-    private var zones: HeartRateZones? {
-        maxHROverride > 0 ? HeartRateZones(maxHR: maxHROverride) : HeartRateZones(age: age)
-    }
+    let env: AppEnvironment
+    private var live: LiveHeartRateModel { env.live }
+    private var zones: HeartRateZones? { env.settings.value.zones }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -20,18 +15,10 @@ struct NowView: View {
             if !live.samples.isEmpty {
                 HeartRateChart(samples: live.samples, window: live.window, zone2: zones?.range(of: .zone2))
             }
-            ZoneSettings(age: $age, maxHROverride: $maxHROverride, zones: zones)
+            zoneSummary
+            SessionRow(recorder: env.recorder)
             DeviceSection(live: live)
-            Divider()
-            HStack {
-                Text("Not medical advice.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button("Quit PulseBar") { NSApplication.shared.terminate(nil) }
-                    .keyboardShortcut("q")
-            }
         }
-        .padding()
-        .frame(width: 320)
     }
 
     private var header: some View {
@@ -49,27 +36,57 @@ struct NowView: View {
         }
         .accessibilityElement(children: .combine)
     }
+
+    @ViewBuilder private var zoneSummary: some View {
+        if let zones {
+            let z2 = zones.range(of: .zone2)
+            Text("Zone 2 (easy): \(z2.lowerBound)–\(z2.upperBound) bpm · max \(zones.maxHR)")
+                .font(.callout).foregroundStyle(.secondary)
+        } else {
+            Text("Set your age in Settings to see heart-rate zones.")
+                .font(.callout).foregroundStyle(.secondary)
+        }
+    }
 }
 
 // MARK: - Pieces
+
+struct SessionRow: View {
+    let recorder: SessionRecorder
+
+    var body: some View {
+        HStack {
+            if let s = recorder.current {
+                Label {
+                    Text("\(s.kind == .workout ? "Workout" : "Desk session") · \(s.start, style: .timer)")
+                } icon: {
+                    Image(systemName: s.kind == .workout ? "figure.run" : "desktopcomputer")
+                }
+                .font(.callout)
+                .monospacedDigit()
+            } else {
+                Label("No session", systemImage: "pause.circle").font(.callout).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if recorder.isWorkout {
+                Button("End workout") { recorder.endWorkout() }
+            } else {
+                Button("Start workout") { recorder.startWorkout() }
+                    .help("Workouts are saved separately and pause desk nudges.")
+            }
+        }
+    }
+}
 
 struct ZoneBadge: View {
     let zone: HeartRateZone
 
     var body: some View {
-        Label(zone.title, systemImage: "circle.fill")
-            .font(.callout)
-            .labelStyle(ZoneLabelStyle(color: zone.color))
-    }
-}
-
-private struct ZoneLabelStyle: LabelStyle {
-    let color: Color
-    func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 4) {
-            configuration.icon.foregroundStyle(color).imageScale(.small)
-            configuration.title
+            Image(systemName: "circle.fill").foregroundStyle(zone.color).imageScale(.small)
+            Text(zone.title)
         }
+        .font(.callout)
     }
 }
 
@@ -157,37 +174,6 @@ struct HeartRateChart: View {
     }
 }
 
-struct ZoneSettings: View {
-    @Binding var age: Int
-    @Binding var maxHROverride: Int
-    let zones: HeartRateZones?
-
-    var body: some View {
-        DisclosureGroup {
-            VStack(alignment: .leading, spacing: 6) {
-                Stepper("Age: \(age == 0 ? "not set" : String(age))",
-                        value: $age, in: 0...100)
-                Toggle("Use my own max heart rate", isOn: Binding(
-                    get: { maxHROverride > 0 },
-                    set: { maxHROverride = $0 ? (zones?.maxHR ?? 190) : 0 }))
-                if maxHROverride > 0 {
-                    Stepper("Max HR: \(maxHROverride) bpm", value: $maxHROverride,
-                            in: HeartRateZones.plausibleMaxHR)
-                }
-            }
-            .padding(.top, 4)
-        } label: {
-            if let zones {
-                let z2 = zones.range(of: .zone2)
-                Text("Zone 2 (easy): \(z2.lowerBound)–\(z2.upperBound) bpm · max \(zones.maxHR)")
-            } else {
-                Text("Set your age to see heart-rate zones")
-            }
-        }
-        .font(.callout)
-    }
-}
-
 /// Whether live HRV (spec F2.5) will be possible with this device.
 /// "Not sent" is only claimed after 10 readings, so one RR-less packet isn't misread.
 struct RRStatus: View {
@@ -211,7 +197,6 @@ struct RRStatus: View {
 
 struct DeviceSection: View {
     let live: LiveHeartRateModel
-    @State private var showPicker = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -235,7 +220,7 @@ struct DeviceSection: View {
                         ProgressView().controlSize(.small)
                         Text("Looking for heart-rate devices…").font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("On Fitbit Air, turn on “Share heart rate”.")
+                    Text("On Fitbit Air, turn on “Share heart rate” in the Google Health app.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(live.discovered) { device in
